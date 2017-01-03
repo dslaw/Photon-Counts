@@ -11,7 +11,7 @@ require(compiler); enableJIT(3)
 require(MCMCpack)
 require(ggplot2)
 
-source("AdaptiveMWG.R")
+source("adaptive.R")
 
 ## Load and check data
 data = read.table("stars.txt", header = TRUE)
