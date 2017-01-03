@@ -17,9 +17,10 @@ source("adaptive.R")
 data = read.table("stars.txt", header = TRUE)
 J = length(unique(data[["galaxy"]]))
 
-if (J != max(data[["galaxy"]]))
-    is.missing = !(1:max(data[["galaxy"]]) %in% unique(data[["galaxy"]]))
-    cat(which(is.missing), "\n")
+if (J != max(data[["galaxy"]])) {
+    missing = !(1:max(data[["galaxy"]]) %in% unique(data[["galaxy"]]))
+    cat(which(missing), "\n")
+}
 
 data[data[["galaxy"]] < 0, "galaxy"] = NA
 
@@ -35,8 +36,8 @@ lambda_j = sapply(stars, function(galaxy) mean(galaxy[["photon.count"]]))
 gg_data = data.frame(Galaxy = factor(data[["galaxy"]]),
                      Photon.Count = data[["photon.count"]])
 
-p <- ggplot(gg_data, aes(x = Galaxy, y = Photon.Count))
-p + geom_boxplot() +
+ggplot(gg_data, aes(x = Galaxy, y = Photon.Count)) +
+    geom_boxplot() +
     xlab("Galaxy") +
     ylab("Photon count") +
     ggtitle("Distribution of photon counts by galaxy")
@@ -51,7 +52,7 @@ b.alpha = 0.001
 b.beta = 0.001
 
 ## Using Adaptive MWG
-nsamples = 15000L
+n_samples = 15000L
 
 # Initialize parameter vector theta
 # Note that all parameters must be greater than 0
@@ -61,17 +62,17 @@ theta = list(alpha = 1,
 nu = 2 # Std. deviation of proposal distribution (normal)
 
 set.seed(13)
-results = AdaptiveMWG(theta = theta, nu = nu,
-                      n.samples = nsamples, periodicty = 100L,
-                      rate = 1, bounds = c(0.4, 0.5),
-                      J = J, a.alpha = a.alpha, a.beta = a.beta,
-                      b.alpha = b.alpha, b.beta = b.beta,
-                      lambda_j = lambda_j, yj = yj, n = n)
+results = adaptive_mwg(theta = theta, nu = nu,
+                       n.samples = n_samples, periodicty = 100L,
+                       rate = 1, bounds = c(0.4, 0.5),
+                       J = J, a.alpha = a.alpha, a.beta = a.beta,
+                       b.alpha = b.alpha, b.beta = b.beta,
+                       lambda_j = lambda_j, yj = yj, n = n)
 n_accepted = results$number.accepted
 nu = results$nu
-samples = results$samples; rm(results)
+samples = results$samples
 colnames(samples) = c("alpha", "beta", paste0("lambda", 1L:J))
-cat(n_accepted / nsamples, "\n")
+cat(n_accepted / n_samples, "\n")
 
 ## Check that all samples are positive
 if (any(samples <= 0))
@@ -87,6 +88,7 @@ plot(mcmc(samples))
 # If the effective sample size is too low, nu should be tuned further or the
 # number of samples taken should be increased
 ess = effectiveSize(samples)
+all(ess > 1000)
 
 # Check for dependence
 acf(samples[, c("alpha", "beta")])
@@ -116,7 +118,6 @@ colnames(ppdset) = colnames(data)
 ppd_samples = list()
 
 for (i in seq_len(m)) {
-
     ppd = lapply(seq_len(J), function(j)
                  rpois(n = n[j], lambda = lambda_draws[i, j]))
     ppdset[, 2] = unlist(ppd)
@@ -146,14 +147,14 @@ gg_data_summary = data.frame(observed = data_summary,
                              variable = names(data_summary))
 
 ggplot(gg_summary_stats, aes(x = value)) +
-facet_wrap(~ variable, scales = "free_x") +
-geom_histogram(aes(colour = "ppd")) +
-ylab("Count") +
-xlab("") +
-ggtitle("Distributions of summary statistics\nfrom ppd datasets") +
-geom_vline(data = gg_data_summary,
-           aes(xintercept = observed, colour = "Observed")) +
-scale_colour_manual(name = "", values = c("ppd" = NA, "Observed" = "blue"))
+    facet_wrap(~ variable, scales = "free_x") +
+    geom_histogram(aes(colour = "ppd")) +
+    ylab("Count") +
+    xlab("") +
+    ggtitle("Distributions of summary statistics\nfrom ppd datasets") +
+    geom_vline(data = gg_data_summary,
+               aes(xintercept = observed, colour = "Observed")) +
+    scale_colour_manual(name = "", values = c("ppd" = NA, "Observed" = "blue"))
 
 ## Estimated model parameters
 alpha_estimate = median(samples[, "alpha"])
@@ -168,7 +169,9 @@ ggdf = data.frame(Galaxy = rep(j, 2),
                   Lambda = c(lambda_estimates, lambda_j),
                   Group = c(rep("Estimated", J), rep("Observed", J)))
 
-p <- ggplot(ggdf, aes(x = Galaxy, y = Lambda, group = Group, color = Group))
-p + geom_point() + xlab("Galaxy") + ylab(substitute(lambda[j])) +
-ggtitle("Model parameters")
+ggplot(ggdf, aes(x = Galaxy, y = Lambda, group = Group, color = Group)) +
+    geom_point() +
+    xlab("Galaxy") +
+    ylab(substitute(lambda[j])) +
+    ggtitle("Model parameters")
 
