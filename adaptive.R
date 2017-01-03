@@ -58,21 +58,20 @@ adaptive_mwg <- function(theta, nu, n.samples, periodicity = 50L,
                        bounds = bounds)
         }
 
-        while (TRUE) {
-            proposal = rnorm(n = 1, mean = alpha, sd = nu)
-            if (proposal > 0) break
-        }
-
-        u = runif(n = 1, 0, 1)
-        r = alpha_conditional(alpha = proposal, beta = beta,
-                              J = J, lambda_j = lambda_j,
-                              a.alpha = a.alpha, b.alpha = b.alpha) -
-            alpha_conditional(alpha = alpha, beta = beta,
-                              J = J, lambda_j = lambda_j,
-                              a.alpha = a.alpha, b.alpha = b.alpha)
-        if (log(u) <= r) {
-            accepted[i] = TRUE
-            alpha = proposal
+        # Reject if proposal is outside the interval (0, inf)
+        proposal = rnorm(n = 1, mean = alpha, sd = nu)
+        if (proposal > 0) {
+            u = runif(n = 1, 0, 1)
+            r = alpha_conditional(alpha = proposal, beta = beta,
+                                  J = J, lambda_j = lambda_j,
+                                  a.alpha = a.alpha, b.alpha = b.alpha) -
+                alpha_conditional(alpha = alpha, beta = beta,
+                                  J = J, lambda_j = lambda_j,
+                                  a.alpha = a.alpha, b.alpha = b.alpha)
+            if (log(u) <= r) {
+                accepted[i] = TRUE
+                alpha = proposal
+            }
         }
 
         # Sample from conditional of lambda_j for all j
